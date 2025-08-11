@@ -6,7 +6,7 @@ import { Booking } from "../pages/Booking";
 import { Confirmation } from "../pages/Confirmation";
 import { Admin } from "../pages/Admin"; 
 import { User } from "../pages/User";
-
+import { Login } from "../pages/Login";
 
 
 export default function AppRouter() {
@@ -17,6 +17,7 @@ export default function AppRouter() {
         <Route path="/booking" element={<Booking />} />
         <Route path="/confirmation" element={<Confirmation />} />
         <Route path="/user" element={<User />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
     </Router>

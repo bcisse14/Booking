@@ -21,19 +21,12 @@ security:
                 check_path: /api/login_check
                 username_path: email
                 password_path: password
-                success_handler: lexik_jwt_authentication.handler.authentication_success
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
             provider: app_user_provider
 
         api:
             pattern: ^/api
             stateless: true
-            jwt: ~
-            provider: app_user_provider
+            security: false  
 
     access_control:
-        - { path: ^/api/login_check$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/users/me$, roles: IS_AUTHENTICATED_FULLY }
-        - { path: ^/api/admin, roles: ROLE_ADMIN }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
-
+        - { path: ^/api, roles: IS_AUTHENTICATED_ANONYMOUSLY }

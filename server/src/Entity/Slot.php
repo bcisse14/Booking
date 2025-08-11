@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity]
 #[ApiResource(
@@ -14,12 +16,16 @@ use Doctrine\ORM\Mapping as ORM;
 class Slot
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    #[Groups(['read'])]
     private ?int $id = null;
 
-    #[ORM\Column(type: "datetime")]
+    #[ORM\Column(type: "datetimetz")]  // <-- modifié ici pour gérer offset timezone
+    #[Assert\NotNull(message: "La date et l'heure sont obligatoires.")]
+    #[Groups(['read', 'write'])]
     private ?\DateTimeInterface $datetime = null;
 
     #[ORM\Column(type: "boolean")]
+    #[Groups(['read', 'write'])]
     private bool $reserved = false;
 
     public function getId(): ?int
