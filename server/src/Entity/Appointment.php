@@ -5,6 +5,7 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Post;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity]
 #[ApiResource(
@@ -12,73 +13,73 @@ use Doctrine\ORM\Mapping as ORM;
     normalizationContext: ['groups' => ['read']],
     denormalizationContext: ['groups' => ['write']],
     operations: [
-        // On référence le service par son id (déclaré dans services.yaml)
         new Post(processor: 'appointment.processor'),
     ]
 )]
 class Appointment
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    #[Groups(['read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Slot::class)]
+    #[Groups(['read','write'])]
     private ?Slot $slot = null;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups(['read','write'])]
     private string $name = '';
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups(['read','write'])]
     private string $email = '';
 
     #[ORM\Column(type: "boolean")]
+    #[Groups(['read','write'])]
     private bool $confirmed = false;
 
-    public function getId(): ?int
+    // --- Nouveaux champs ---
+    #[ORM\Column(type: 'boolean')]
+    #[Groups(['read'])]
+    private bool $cancelled = false;
+
+    #[ORM\Column(type: 'string', length: 64, nullable: true, unique: true)]
+    private ?string $cancelToken = null;
+
+    #[ORM\Column(type: 'datetime_immutable')]
+    #[Groups(['read'])]
+    private \DateTimeImmutable $createdAt;
+
+    public function __construct()
     {
-        return $this->id;
+        $this->createdAt = new \DateTimeImmutable();
+        try {
+            $this->cancelToken = bin2hex(random_bytes(16));
+        } catch (\Throwable $e) {
+            $this->cancelToken = uniqid('', true);
+        }
     }
 
-    public function getSlot(): ?Slot
-    {
-        return $this->slot;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function setSlot(?Slot $slot): self
-    {
-        $this->slot = $slot;
-        return $this;
-    }
+    public function getSlot(): ?Slot { return $this->slot; }
+    public function setSlot(?Slot $slot): self { $this->slot = $slot; return $this; }
 
-    public function getName(): string
-    {
-        return $this->name;
-    }
+    public function getName(): string { return $this->name; }
+    public function setName(string $name): self { $this->name = $name; return $this; }
 
-    public function setName(string $name): self
-    {
-        $this->name = $name;
-        return $this;
-    }
+    public function getEmail(): string { return $this->email; }
+    public function setEmail(string $email): self { $this->email = $email; return $this; }
 
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
+    public function isConfirmed(): bool { return $this->confirmed; }
+    public function setConfirmed(bool $confirmed): self { $this->confirmed = $confirmed; return $this; }
 
-    public function setEmail(string $email): self
-    {
-        $this->email = $email;
-        return $this;
-    }
+    public function isCancelled(): bool { return $this->cancelled; }
+    public function setCancelled(bool $cancelled): self { $this->cancelled = $cancelled; return $this; }
 
-    public function isConfirmed(): bool
-    {
-        return $this->confirmed;
-    }
+    public function getCancelToken(): ?string { return $this->cancelToken; }
+    public function setCancelToken(?string $cancelToken): self { $this->cancelToken = $cancelToken; return $this; }
 
-    public function setConfirmed(bool $confirmed): self
-    {
-        $this->confirmed = $confirmed;
-        return $this;
-    }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self { $this->createdAt = $createdAt; return $this; }
 }

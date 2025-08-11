@@ -10,22 +10,22 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Entity]
 #[ApiResource(
     formats: ['jsonld', 'json'],
-    normalizationContext: ['groups' => ['read']],
-    denormalizationContext: ['groups' => ['write']]
+    normalizationContext: ['groups' => ['slot:read']],
+    denormalizationContext: ['groups' => ['slot:write']]
 )]
 class Slot
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
-    #[Groups(['read'])]
+    #[Groups(['slot:read', 'appointment:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(type: "datetimetz")]  // <-- modifié ici pour gérer offset timezone
+    #[ORM\Column(type: "datetimetz")]
     #[Assert\NotNull(message: "La date et l'heure sont obligatoires.")]
-    #[Groups(['read', 'write'])]
+    #[Groups(['slot:read', 'slot:write', 'appointment:read'])]
     private ?\DateTimeInterface $datetime = null;
 
     #[ORM\Column(type: "boolean")]
-    #[Groups(['read', 'write'])]
+    #[Groups(['slot:read', 'slot:write', 'appointment:read'])]
     private bool $reserved = false;
 
     public function getId(): ?int
@@ -52,6 +52,24 @@ class Slot
     public function setReserved(bool $reserved): self
     {
         $this->reserved = $reserved;
+        return $this;
+    }
+
+    /**
+     * Marque le créneau comme disponible (ex: après annulation)
+     */
+    public function free(): self
+    {
+        $this->reserved = false;
+        return $this;
+    }
+
+    /**
+     * Marque le créneau comme réservé
+     */
+    public function book(): self
+    {
+        $this->reserved = true;
         return $this;
     }
 }

@@ -9,30 +9,85 @@ use Psr\Log\LoggerInterface;
 
 class NotificationService
 {
+    private string $ownerEmail = 'cbafode14@gmail.com';
+    private string $appUrl;
+
     public function __construct(
         private MailerInterface $mailer,
         private LoggerInterface $logger
-    ) {}
+    ) {
+        $this->appUrl = getenv('APP_URL') ?: 'http://localhost:8000';
+    }
 
-    /**
-     * Envoie une notification par email pour un rendez-vous.
-     * Nève JAMAIS l'exception au caller : on loggue et on continue.
-     */
     public function sendAppointmentNotification(Appointment $appointment): void
     {
         try {
-            $html = $this->createAppointmentEmailContent($appointment);
+            $slot = $appointment->getSlot();
+            $datetime = 'Non renseigné';
+            if ($slot !== null) {
+                try {
+                    $slotDatetime = $slot->getDatetime();
+                    if ($slotDatetime instanceof \DateTimeInterface) {
+                        $datetime = $slotDatetime->format('d/m/Y à H:i');
+                    }
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Impossible de lire la date du slot', ['exception' => $e]);
+                }
+            }
 
-            $email = (new Email())
-                ->from('noreply@votre-domaine.com')      // adapte ici si besoin
-                ->to('cbafode14@gmail.com')             // adapte la cible
-                ->subject('Nouveau rendez-vous pris')
-                ->html($html);
+            $clientName = $appointment->getName() ?: '—';
+            $clientEmail = $appointment->getEmail() ?: '—';
+            $clientNameEsc = htmlspecialchars($clientName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $clientEmailEsc = htmlspecialchars($clientEmail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $datetimeEsc = htmlspecialchars($datetime, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-            $this->mailer->send($email);
-            $this->logger->info('Notification appointment envoyée', ['appointment_id' => $appointment->getId()]);
+            // Mail au propriétaire
+            $ownerHtml = "
+                <div style='font-family: Arial, sans-serif;'>
+                    <h2>Nouveau rendez-vous réservé</h2>
+                    <p><strong>Nom :</strong> {$clientNameEsc}</p>
+                    <p><strong>Email :</strong> {$clientEmailEsc}</p>
+                    <p><strong>Date & heure :</strong> {$datetimeEsc}</p>
+                </div>
+            ";
+            $ownerEmail = (new Email())
+                ->from('noreply@votre-domaine.com')
+                ->to($this->ownerEmail)
+                ->subject('Nouveau rendez-vous réservé')
+                ->html($ownerHtml);
+
+            $this->mailer->send($ownerEmail);
+            $this->logger->info('Notification envoyée au propriétaire', ['appointment_id' => $appointment->getId()]);
+
+            // Mail au client — inclut lien d'annulation
+            if (!empty($appointment->getEmail())) {
+                $cancelUrl = $this->buildCancelUrl($appointment);
+                $clientHtml = "
+                    <div style='font-family: Arial, sans-serif;'>
+                      <h2>Confirmation de votre rendez-vous</h2>
+                      <p>Bonjour {$clientNameEsc},</p>
+                      <p>Merci d'avoir pris rendez-vous. Voici les détails :</p>
+                      <ul>
+                        <li><strong>Date & heure :</strong> {$datetimeEsc}</li>
+                        <li><strong>Contact :</strong> {$clientEmailEsc}</li>
+                      </ul>
+                      <p>Si vous souhaitez annuler, cliquez sur le lien ci-dessous :</p>
+                      <p><a href=\"{$cancelUrl}\">Appuyez ici pour annuler votre rendez-vous</a></p>
+                      <p>Après annulation, le créneau sera de nouveau disponible et nous vous enverrons une confirmation.</p>
+                      <p>Cordialement,<br/>L'équipe de réservation</p>
+                    </div>
+                ";
+
+                $confirmation = (new Email())
+                    ->from('noreply@votre-domaine.com')
+                    ->to($appointment->getEmail())
+                    ->subject('Confirmation de votre rendez-vous')
+                    ->html($clientHtml);
+
+                $this->mailer->send($confirmation);
+                $this->logger->info('Confirmation envoyée au client', ['appointment_id' => $appointment->getId()]);
+            }
         } catch (\Throwable $e) {
-            // Log et on continue : ne doit pas casser la création du rendez-vous
             $this->logger->error('Erreur envoi email: ' . $e->getMessage(), [
                 'exception' => $e,
                 'appointment_id' => $appointment->getId(),
@@ -40,57 +95,67 @@ class NotificationService
         }
     }
 
-    private function createAppointmentEmailContent(Appointment $appointment): string
+    public function sendCancellationNotification(Appointment $appointment): void
     {
-        $slot = $appointment->getSlot();
-        $datetime = 'Non renseigné';
-
-        if ($slot !== null) {
-            try {
-                $slotDatetime = $slot->getDatetime();
-                if ($slotDatetime instanceof \DateTimeInterface) {
-                    $datetime = $slotDatetime->format('d/m/Y à H:i');
-                } else {
-                    $datetime = (string) $slotDatetime;
-                }
-            } catch (\Throwable $e) {
-                $this->logger->warning('Impossible de récupérer la date du slot pour le mail', [
-                    'exception' => $e,
-                    'appointment_id' => $appointment->getId(),
-                ]);
+        try {
+            $slot = $appointment->getSlot();
+            $datetime = 'Non renseigné';
+            if ($slot !== null && $slot->getDatetime() instanceof \DateTimeInterface) {
+                $datetime = $slot->getDatetime()->format('d/m/Y à H:i');
             }
+
+            $clientName = $appointment->getName() ?: '—';
+            $clientEmail = $appointment->getEmail() ?: '—';
+            $clientNameEsc = htmlspecialchars($clientName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $clientEmailEsc = htmlspecialchars($clientEmail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $datetimeEsc = htmlspecialchars($datetime, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+            $ownerHtml = "
+                <h2>Rendez-vous annulé</h2>
+                <p>Le rendez-vous suivant a été annulé et le créneau est de nouveau disponible :</p>
+                <p><strong>Nom :</strong> {$clientNameEsc}</p>
+                <p><strong>Email :</strong> {$clientEmailEsc}</p>
+                <p><strong>Date & heure :</strong> {$datetimeEsc}</p>
+            ";
+            $ownerEmail = (new Email())
+                ->from('noreply@votre-domaine.com')
+                ->to($this->ownerEmail)
+                ->subject('Annulation de rendez-vous')
+                ->html($ownerHtml);
+
+            $this->mailer->send($ownerEmail);
+            $this->logger->info('Notification d\'annulation envoyée au propriétaire', ['appointment_id' => $appointment->getId()]);
+
+            if (!empty($appointment->getEmail())) {
+                $clientHtml = "
+                    <div style='font-family: Arial, sans-serif;'>
+                      <h2>Votre rendez-vous a été annulé</h2>
+                      <p>Bonjour {$clientNameEsc},</p>
+                      <p>Votre rendez-vous du <strong>{$datetimeEsc}</strong> a bien été annulé. Le créneau est maintenant disponible.</p>
+                      <p>Cordialement,<br/>L'équipe de réservation</p>
+                    </div>
+                ";
+                $confirmation = (new Email())
+                    ->from('noreply@votre-domaine.com')
+                    ->to($appointment->getEmail())
+                    ->subject('Annulation de votre rendez-vous')
+                    ->html($clientHtml);
+
+                $this->mailer->send($confirmation);
+                $this->logger->info('Confirmation d\'annulation envoyée au client', ['appointment_id' => $appointment->getId()]);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('Erreur envoi email annulation: ' . $e->getMessage(), [
+                'exception' => $e,
+                'appointment_id' => $appointment->getId(),
+            ]);
         }
+    }
 
-        $nameEsc = htmlspecialchars($appointment->getName() ?? '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $emailEsc = htmlspecialchars($appointment->getEmail() ?? '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $datetimeEsc = htmlspecialchars($datetime, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-        return "
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;'>
-            <div style='background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
-                <h1 style='color: #333; text-align: center; margin-bottom: 30px; font-size: 24px;'>
-                    🗓️ Nouveau Rendez-vous Réservé
-                </h1>
-                
-                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;'>
-                    <h2 style='color: #495057; margin-top: 0; font-size: 18px;'>Détails du rendez-vous :</h2>
-                    <p style='margin: 10px 0;'><strong>📅 Date et heure :</strong> {$datetimeEsc}</p>
-                    <p style='margin: 10px 0;'><strong>👤 Nom :</strong> {$nameEsc}</p>
-                    <p style='margin: 10px 0;'><strong>📧 Email :</strong> {$emailEsc}</p>
-                </div>
-                
-                <div style='background-color: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #bee5eb;'>
-                    <p style='margin: 0; color: #0c5460;'>
-                        <strong>ℹ️ Information :</strong> Ce rendez-vous est en attente de confirmation.
-                    </p>
-                </div>
-                
-                <div style='text-align: center; margin-top: 30px;'>
-                    <p style='color: #6c757d; font-size: 14px;'>
-                        Email envoyé automatiquement par le système de réservation
-                    </p>
-                </div>
-            </div>
-        </div>";
+    private function buildCancelUrl(Appointment $appointment): string
+    {
+        $token = $appointment->getCancelToken() ?: '';
+        $base = rtrim($this->appUrl, '/');
+        return $base . '/appointments/cancel/' . rawurlencode($token);
     }
 }

@@ -7,6 +7,7 @@ use App\Entity\Appointment;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class AppointmentProcessor implements ProcessorInterface
 {
@@ -16,30 +17,53 @@ class AppointmentProcessor implements ProcessorInterface
         private LoggerInterface $logger
     ) {}
 
-    /**
-     * @param Appointment $data
-     */
     public function process($data, Operation $operation, array $uriVariables = [], array $context = [])
     {
         if (!$data instanceof Appointment) {
             throw new \InvalidArgumentException('Expected Appointment instance');
         }
 
-        // Persist the appointment (this must not be interrupted by email issues)
-        $this->entityManager->persist($data);
-        $this->entityManager->flush();
-
-        // Try to send notification but never throw if email fails
+        $this->entityManager->beginTransaction();
         try {
-            $this->notificationService->sendAppointmentNotification($data);
-        } catch (\Throwable $e) {
-            $this->logger->error('Failed to send appointment notification', [
-                'exception' => $e,
-                'appointment_id' => $data->getId(),
-            ]);
-            // Do not rethrow — the appointment is already persisted
-        }
+            $slot = $data->getSlot();
 
-        return $data;
+            if ($slot) {
+                if ($slot->isReserved()) {
+                    throw new ConflictHttpException('Ce créneau est déjà réservé.');
+                }
+                $slot->setReserved(true);
+                $this->entityManager->persist($slot);
+            }
+
+            if (null === $data->getCancelToken()) {
+                try {
+                    $data->setCancelToken(bin2hex(random_bytes(16)));
+                } catch (\Throwable $e) {
+                    $data->setCancelToken(uniqid('', true));
+                }
+            }
+
+            if (null === $data->getCreatedAt()) {
+                $data->setCreatedAt(new \DateTimeImmutable());
+            }
+
+            $this->entityManager->persist($data);
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+            try {
+                $this->notificationService->sendAppointmentNotification($data);
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to send appointment notification', [
+                    'exception' => $e,
+                    'appointment_id' => $data->getId(),
+                ]);
+            }
+
+            return $data;
+        } catch (\Throwable $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
     }
 }

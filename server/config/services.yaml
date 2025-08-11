@@ -26,3 +26,6 @@ services:
         public: true
         tags:
             - { name: 'api_platform.state.processor' }
+    App\Doctrine\SlotAvailableExtension:
+        tags:
+            - { name: 'api_platform.doctrine.orm.query_extension.collection' }

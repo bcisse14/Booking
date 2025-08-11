@@ -1,0 +1,82 @@
+{
+  "@context": "/api/contexts/Slot",
+  "@id": "/api/slots",
+  "@type": "Collection",
+  "totalItems": 10,
+  "member": [
+    {
+      "@id": "/api/slots/1",
+      "@type": "Slot",
+      "id": 1,
+      "datetime": "2025-08-11T14:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/2",
+      "@type": "Slot",
+      "id": 2,
+      "datetime": "2025-08-11T12:01:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/3",
+      "@type": "Slot",
+      "id": 3,
+      "datetime": "2025-08-13T22:00:00+00:00",
+      "reserved": true
+    },
+    {
+      "@id": "/api/slots/4",
+      "@type": "Slot",
+      "id": 4,
+      "datetime": "2025-08-14T10:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/5",
+      "@type": "Slot",
+      "id": 5,
+      "datetime": "2025-08-14T12:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/6",
+      "@type": "Slot",
+      "id": 6,
+      "datetime": "2025-08-12T13:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/7",
+      "@type": "Slot",
+      "id": 7,
+      "datetime": "2025-08-18T13:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/8",
+      "@type": "Slot",
+      "id": 8,
+      "datetime": "2025-08-20T13:00:00+00:00",
+      "reserved": true
+    },
+    {
+      "@id": "/api/slots/9",
+      "@type": "Slot",
+      "id": 9,
+      "datetime": "2025-08-10T13:00:00+00:00",
+      "reserved": false
+    },
+    {
+      "@id": "/api/slots/10",
+      "@type": "Slot",
+      "id": 10,
+      "datetime": "2025-08-24T13:00:00+00:00",
+      "reserved": false
+    }
+  ],
+  "view": {
+    "@id": "/api/slots?reserved=false",
+    "@type": "PartialCollectionView"
+  }
+}

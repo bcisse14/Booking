@@ -15,19 +15,28 @@ export default function Booking() {
   const [availableDates, setAvailableDates] = useState([]);
 
   /* ---------- Helpers pour dates (locale-safe) ---------- */
+  const pad2 = (n) => String(n).padStart(2, '0');
+
   const formatYMD = (d) => {
-    if (!(d instanceof Date)) return '';
+    if (!(d instanceof Date) || isNaN(d.getTime())) return '';
     const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const month = pad2(d.getMonth() + 1);
+    const day = pad2(d.getDate());
     return `${year}-${month}-${day}`;
   };
 
+  const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime());
+
+  /**
+   * safeParseISO: robuste face aux ISO avec ou sans offset.
+   */
   const safeParseISO = (s) => {
     if (!s) return new Date(NaN);
-    const d = new Date(s);
-    if (!isNaN(d)) return d;
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(s) || /Z$|[+-]\d{2}:\d{2}$/.test(s)) {
+      const d = new Date(s);
+      return isValidDate(d) ? d : new Date(NaN);
+    }
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
     if (m) {
       const year = Number(m[1]);
       const month = Number(m[2]) - 1;
@@ -37,7 +46,25 @@ export default function Booking() {
       const sec = Number(m[6] || 0);
       return new Date(year, month, day, hour, min, sec);
     }
-    return d;
+    const d = new Date(s);
+    return isValidDate(d) ? d : new Date(NaN);
+  };
+
+  // Convertit 'YYYY-MM-DD' en Date locale (00:00 locale)
+  const ymdToLocalDate = (ymd) => {
+    if (!ymd || typeof ymd !== 'string') return new Date(NaN);
+    const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return new Date(NaN);
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  };
+
+  /* ---------- util: détecte si un slot est réservé (différents formats possibles) ---------- */
+  const isReservedFlag = (slot) => {
+    if (!slot) return false;
+    // priorise la propriété 'reserved', fallback à booléens communs
+    const v = slot.reserved ?? slot.isReserved ?? slot.taken ?? slot.booked ?? null;
+    if (v === null || v === undefined) return false;
+    return v === true || v === 'true' || v === 1 || v === '1';
   };
 
   /* ---------- Fetch + normalisation ---------- */
@@ -51,15 +78,19 @@ export default function Booking() {
       return;
     }
     const s = new Set();
+    // ATTENTION: on utilise uniquement les slots non réservés pour availableDates
     slots.forEach(slot => {
+      if (isReservedFlag(slot)) return; // ignore réservés
       const d = safeParseISO(slot.datetime);
-      if (!isNaN(d)) s.add(formatYMD(d));
+      if (isValidDate(d)) s.add(formatYMD(d));
     });
     setAvailableDates([...s].sort());
   }, [slots]);
 
   const fetchSlots = async () => {
     try {
+      // Si tu utilises Vite proxy -> '/api/slots?reserved=false'
+      // Sinon -> 'http://localhost:8000/api/slots?reserved=false'
       const res = await axios.get('http://localhost:8000/api/slots?reserved=false');
       const data = res?.data;
       let items = [];
@@ -76,10 +107,12 @@ export default function Booking() {
         else items = [data];
       }
 
+      // filtrage : supprime explicitement tout item marqué réservé
       items = items
         .filter(s => s && (s.id !== undefined) && (s.datetime))
         .map(s => ({ ...s }))
-        .sort((a, b) => safeParseISO(a.datetime) - safeParseISO(b.datetime));
+        .filter(s => !isReservedFlag(s))
+        .sort((a, b) => safeParseISO(a.datetime).getTime() - safeParseISO(b.datetime).getTime());
 
       setSlots(items);
     } catch (err) {
@@ -94,14 +127,15 @@ export default function Booking() {
     const ymd = typeof dateOrYmd === 'string'
       ? (/^\d{4}-\d{2}-\d{2}$/.test(dateOrYmd) ? dateOrYmd : formatYMD(safeParseISO(dateOrYmd)))
       : formatYMD(dateOrYmd);
-    const arr = Array.isArray(slots) ? slots : [];
+    // on s'assure de n'utiliser que les slots non réservés
+    const arr = Array.isArray(slots) ? slots.filter(s => !isReservedFlag(s)) : [];
     return arr
       .filter(slot => {
         const d = safeParseISO(slot.datetime);
-        if (isNaN(d)) return false;
+        if (!isValidDate(d)) return false;
         return formatYMD(d) === ymd;
       })
-      .sort((a, b) => safeParseISO(a.datetime) - safeParseISO(b.datetime));
+      .sort((a, b) => safeParseISO(a.datetime).getTime() - safeParseISO(b.datetime).getTime());
   };
 
   const getDaysInMonthGrid = (date) => {
@@ -119,12 +153,11 @@ export default function Booking() {
   /* ---------- PATCH helper (essaye plusieurs Content-Types si besoin) ---------- */
   const patchSlot = async (slotId, bodyObj) => {
     const url = `http://localhost:8000/api/slots/${slotId}`;
-    const contentTypes = ['application/json', 'application/ld+json']; // ordre : tente application/json d'abord
+    const contentTypes = ['application/json', 'application/ld+json'];
     let lastError = null;
 
     for (const ct of contentTypes) {
       try {
-        // axios.patch stringifie automatiquement le body et envoie l'en-tête Content-Type demandé
         const res = await axios.patch(url, bodyObj, {
           headers: {
             'Content-Type': ct,
@@ -134,13 +167,10 @@ export default function Booking() {
         return res;
       } catch (err) {
         lastError = err;
-        // si 415, on continue et on retente avec le prochain type ; sinon on jette
         const status = err?.response?.status;
         if (status && status !== 415) throw err;
-        // si status === 415 : backend n'aime pas ce content-type -> on essaie le suivant
       }
     }
-    // après avoir tout essayé, on jette la dernière erreur
     throw lastError;
   };
 
@@ -151,11 +181,15 @@ export default function Booking() {
       setMessage('❌ Veuillez choisir un créneau');
       return;
     }
+    if (!name.trim() || !email.trim()) {
+      setMessage('❌ Nom et email requis');
+      return;
+    }
     setLoading(true);
     setMessage('');
 
     try {
-      // 1) Création Appointment (JSON-LD comme ton backend aime)
+      // 1) Création Appointment
       await axios.post('http://localhost:8000/api/appointments', {
         name: name.trim(),
         email: email.trim(),
@@ -165,7 +199,7 @@ export default function Booking() {
         headers: { 'Content-Type': 'application/ld+json' }
       });
 
-      // 2) PATCH slot -> essaie application/json puis application/ld+json
+      // 2) PATCH slot reserved
       await patchSlot(selectedSlot.id, { reserved: true });
 
       // Succès
@@ -178,7 +212,6 @@ export default function Booking() {
     } catch (err) {
       console.error('Erreur:', err);
 
-      // Si erreur axios, essaie d'extraire un message serveur lisible
       let serverMsg = '';
       if (err?.response?.data) {
         try {
@@ -191,6 +224,10 @@ export default function Booking() {
       }
 
       setMessage(`❌ Erreur: ${serverMsg}`);
+      // Si erreur 409, on refetch pour synchroniser l'UI
+      if (err?.response?.status === 409) {
+        await fetchSlots();
+      }
     } finally {
       setLoading(false);
     }
@@ -213,6 +250,8 @@ export default function Booking() {
   const cells = getDaysInMonthGrid(currentDate);
 
   /* ---------- Render ---------- */
+  const selectedLocalDate = selectedDate ? ymdToLocalDate(selectedDate) : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-blue-100">
@@ -259,7 +298,7 @@ export default function Booking() {
 
               return (
                 <button
-                  key={ymd}
+                  key={`${ymd}-${idx}`}
                   className={base}
                   disabled={isPast || !available}
                   onClick={() => {
@@ -296,22 +335,29 @@ export default function Booking() {
             <>
               <div className="mb-4 text-gray-700">
                 <strong>Créneaux pour </strong>
-                {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {isValidDate(selectedLocalDate)
+                  ? selectedLocalDate.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                  : selectedDate}
               </div>
 
               <div className="flex flex-wrap gap-3 mb-6">
                 {getSlotsForDate(selectedDate).map(slot => {
-                  const timeStr = safeParseISO(slot.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  const isSelected = selectedSlot?.id === slot.id;
+                  const parsed = safeParseISO(slot.datetime);
+                  const timeStr = isValidDate(parsed)
+                    ? parsed.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                    : slot.datetime;
+                  const reserved = isReservedFlag(slot); // Should be false because we filtered, but double check
+                  const isSel = selectedSlot?.id === slot.id;
                   return (
                     <button
                       key={slot.id}
-                      onClick={() => setSelectedSlot(slot)}
+                      onClick={() => !reserved && setSelectedSlot(slot)}
                       type="button"
+                      disabled={reserved}
                       className={`px-4 py-2 rounded-full font-semibold transition-shadow
-                        ${isSelected ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                        ${isSel ? 'bg-blue-600 text-white shadow-md' : reserved ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
                     >
-                      {timeStr}
+                      {timeStr}{reserved ? ' (réservé)' : ''}
                     </button>
                   );
                 })}
