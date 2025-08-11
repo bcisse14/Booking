@@ -5,6 +5,8 @@ import Booking from './pages/Booking';
 import Admin from './pages/Admin';
 import User from './pages/User';
 import Login from './pages/Login';
+import './App.css'; // Import global styles
+
 
 export default function App() {
   return (
@@ -17,5 +19,6 @@ export default function App() {
         <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
+    
   );
 }

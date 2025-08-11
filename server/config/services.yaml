@@ -1,16 +1,28 @@
+# config/services.yaml
+parameters: {}
+
 services:
     _defaults:
         autowire: true
         autoconfigure: true
+        public: false
 
-    App\State\UserProcessor:
-        tags: ['api_platform.state_processor']
-        bind:
+    # charge automatiquement tout le code App\
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{DependencyInjection,Entity,Migrations,Tests,Kernel.php}'
+
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    # -- Déclaration explicite du processor utilisé par l'operation POST de Appointment
+    appointment.processor:
+        class: App\State\AppointmentProcessor
+        arguments:
             $entityManager: '@doctrine.orm.entity_manager'
-            $passwordHasher: '@security.user_password_hasher'
-            $validator: '@validator'
-
-    App\Command\MakeAdminCommand:
-        tags: ['console.command']
-
-
+            $notificationService: '@App\Service\NotificationService'
+            $logger: '@logger'
+        public: true
+        tags:
+            - { name: 'api_platform.state.processor' }

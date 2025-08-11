@@ -1,3 +1,4 @@
+// src/pages/Booking.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -13,353 +14,349 @@ export default function Booking() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [availableDates, setAvailableDates] = useState([]);
 
+  /* ---------- Helpers pour dates (locale-safe) ---------- */
+  const formatYMD = (d) => {
+    if (!(d instanceof Date)) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const safeParseISO = (s) => {
+    if (!s) return new Date(NaN);
+    const d = new Date(s);
+    if (!isNaN(d)) return d;
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+      const year = Number(m[1]);
+      const month = Number(m[2]) - 1;
+      const day = Number(m[3]);
+      const hour = Number(m[4] || 0);
+      const min = Number(m[5] || 0);
+      const sec = Number(m[6] || 0);
+      return new Date(year, month, day, hour, min, sec);
+    }
+    return d;
+  };
+
+  /* ---------- Fetch + normalisation ---------- */
   useEffect(() => {
     fetchSlots();
   }, []);
 
   useEffect(() => {
-    if (slots.length > 0) {
-      const dates = [...new Set(slots.map(slot => 
-        new Date(slot.datetime).toISOString().split('T')[0]
-      ))].sort();
-      setAvailableDates(dates);
+    if (!Array.isArray(slots) || slots.length === 0) {
+      setAvailableDates([]);
+      return;
     }
+    const s = new Set();
+    slots.forEach(slot => {
+      const d = safeParseISO(slot.datetime);
+      if (!isNaN(d)) s.add(formatYMD(d));
+    });
+    setAvailableDates([...s].sort());
   }, [slots]);
 
   const fetchSlots = async () => {
     try {
       const res = await axios.get('http://localhost:8000/api/slots?reserved=false');
-      setSlots(res.data['hydra:member'] || res.data);
+      const data = res?.data;
+      let items = [];
+
+      if (Array.isArray(data)) {
+        items = data;
+      } else if (data && Array.isArray(data['hydra:member'])) {
+        items = data['hydra:member'];
+      } else if (data && Array.isArray(data.items)) {
+        items = data.items;
+      } else if (data && typeof data === 'object') {
+        const arrProp = Object.keys(data).find(k => Array.isArray(data[k]));
+        if (arrProp) items = data[arrProp];
+        else items = [data];
+      }
+
+      items = items
+        .filter(s => s && (s.id !== undefined) && (s.datetime))
+        .map(s => ({ ...s }))
+        .sort((a, b) => safeParseISO(a.datetime) - safeParseISO(b.datetime));
+
+      setSlots(items);
     } catch (err) {
-      console.error("Erreur lors du chargement des créneaux:", err);
-      setMessage("❌ Erreur lors du chargement des créneaux");
+      console.error('Erreur lors du chargement des créneaux:', err);
+      setMessage('❌ Erreur lors du chargement des créneaux');
+      setSlots([]);
     }
   };
 
+  /* ---------- Utilitaires calendrier ---------- */
+  const getSlotsForDate = (dateOrYmd) => {
+    const ymd = typeof dateOrYmd === 'string'
+      ? (/^\d{4}-\d{2}-\d{2}$/.test(dateOrYmd) ? dateOrYmd : formatYMD(safeParseISO(dateOrYmd)))
+      : formatYMD(dateOrYmd);
+    const arr = Array.isArray(slots) ? slots : [];
+    return arr
+      .filter(slot => {
+        const d = safeParseISO(slot.datetime);
+        if (isNaN(d)) return false;
+        return formatYMD(d) === ymd;
+      })
+      .sort((a, b) => safeParseISO(a.datetime) - safeParseISO(b.datetime));
+  };
+
+  const getDaysInMonthGrid = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Dimanche
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < firstDayIndex; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  };
+
+  /* ---------- PATCH helper (essaye plusieurs Content-Types si besoin) ---------- */
+  const patchSlot = async (slotId, bodyObj) => {
+    const url = `http://localhost:8000/api/slots/${slotId}`;
+    const contentTypes = ['application/json', 'application/ld+json']; // ordre : tente application/json d'abord
+    let lastError = null;
+
+    for (const ct of contentTypes) {
+      try {
+        // axios.patch stringifie automatiquement le body et envoie l'en-tête Content-Type demandé
+        const res = await axios.patch(url, bodyObj, {
+          headers: {
+            'Content-Type': ct,
+            Accept: 'application/ld+json'
+          }
+        });
+        return res;
+      } catch (err) {
+        lastError = err;
+        // si 415, on continue et on retente avec le prochain type ; sinon on jette
+        const status = err?.response?.status;
+        if (status && status !== 415) throw err;
+        // si status === 415 : backend n'aime pas ce content-type -> on essaie le suivant
+      }
+    }
+    // après avoir tout essayé, on jette la dernière erreur
+    throw lastError;
+  };
+
+  /* ---------- Submit : création appointment puis patch slot ---------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedSlot) {
       setMessage('❌ Veuillez choisir un créneau');
       return;
     }
-
     setLoading(true);
+    setMessage('');
+
     try {
-      // Création du rendez-vous
+      // 1) Création Appointment (JSON-LD comme ton backend aime)
       await axios.post('http://localhost:8000/api/appointments', {
         name: name.trim(),
         email: email.trim(),
         slot: `/api/slots/${selectedSlot.id}`,
         confirmed: false
       }, {
-        headers: {
-          'Content-Type': 'application/ld+json'
-        }
+        headers: { 'Content-Type': 'application/ld+json' }
       });
 
-      // Mise à jour du slot comme réservé
-      await axios.patch(`http://localhost:8000/api/slots/${selectedSlot.id}`, {
-        reserved: true
-      }, {
-        headers: {
-          'Content-Type': 'application/merge-patch+json'
-        }
-      });
+      // 2) PATCH slot -> essaie application/json puis application/ld+json
+      await patchSlot(selectedSlot.id, { reserved: true });
 
+      // Succès
       setMessage('✅ Rendez-vous réservé avec succès ! Un email de confirmation va être envoyé.');
       setName('');
       setEmail('');
       setSelectedSlot(null);
       setSelectedDate('');
-      
-      // Rafraîchir la liste des créneaux
       await fetchSlots();
     } catch (err) {
       console.error('Erreur:', err);
-      setMessage(`❌ Erreur: ${err.response?.data?.message || err.message}`);
+
+      // Si erreur axios, essaie d'extraire un message serveur lisible
+      let serverMsg = '';
+      if (err?.response?.data) {
+        try {
+          serverMsg = JSON.stringify(err.response.data);
+        } catch {
+          serverMsg = String(err.response.data);
+        }
+      } else {
+        serverMsg = err.message || String(err);
+      }
+
+      setMessage(`❌ Erreur: ${serverMsg}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
-    const days = [];
-    const currentDate = new Date(startDate);
-    
-    while (currentDate <= lastDay || days.length < 42) {
-      days.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return days;
-  };
-
-  const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const isDateAvailable = (date) => {
-    return availableDates.includes(formatDate(date));
-  };
-
-  const getSlotsForDate = (date) => {
-    const dateStr = formatDate(date);
-    return slots.filter(slot => 
-      new Date(slot.datetime).toISOString().split('T')[0] === dateStr
-    );
-  };
-
+  /* ---------- UI helpers ---------- */
   const monthNames = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
-
-  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-
+  const dayNames = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const navigateMonth = (direction) => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
+    setSelectedDate('');
+    setSelectedSlot(null);
+    setMessage('');
   };
 
+  const todayYMD = formatYMD(new Date());
+  const cells = getDaysInMonthGrid(currentDate);
+
+  /* ---------- Render ---------- */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-green-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center space-x-2 text-green-600 hover:text-green-700">
-              <span className="text-xl">←</span>
-              <span className="font-medium">Retour à l'accueil</span>
-            </Link>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              📅 Réservation
-            </h1>
-            <div></div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-blue-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link to="/" className="text-gray-700 font-medium hover:text-gray-900">← Accueil</Link>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Réservation
+          </h1>
+          <div style={{ width: 80 }} />
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Calendrier */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h2>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => navigateMonth(-1)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => navigateMonth(1)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-
-            {/* En-têtes des jours */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {dayNames.map(day => (
-                <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Grille du calendrier */}
-            <div className="grid grid-cols-7 gap-1">
-              {getDaysInMonth(currentDate).map((date, index) => {
-                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                const isSelected = selectedDate === formatDate(date);
-                const isAvailable = isDateAvailable(date);
-                const isPast = date < new Date().setHours(0,0,0,0);
-                
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      if (isCurrentMonth && isAvailable && !isPast) {
-                        setSelectedDate(formatDate(date));
-                        setSelectedSlot(null);
-                      }
-                    }}
-                    disabled={!isCurrentMonth || !isAvailable || isPast}
-                    className={`
-                      p-3 text-sm rounded-lg transition-all duration-200 relative
-                      ${!isCurrentMonth ? 'text-gray-300' : ''}
-                      ${isPast ? 'text-gray-400 cursor-not-allowed' : ''}
-                      ${isSelected ? 'bg-green-500 text-white ring-2 ring-green-300' : ''}
-                      ${isCurrentMonth && isAvailable && !isPast && !isSelected ? 
-                        'text-gray-900 hover:bg-green-100 cursor-pointer' : ''}
-                      ${!isAvailable && isCurrentMonth && !isPast ? 'text-gray-400' : ''}
-                    `}
-                  >
-                    {date.getDate()}
-                    {isAvailable && isCurrentMonth && !isPast && (
-                      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full"></div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Créneaux disponibles</span>
-                </div>
-              </div>
-            </div>
+      <main className="max-w-4xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Calendrier */}
+        <section className="bg-white rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => navigateMonth(-1)} className="text-xl font-bold px-3 py-1 rounded hover:bg-gray-100">‹</button>
+            <h2 className="text-lg font-semibold">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            <button onClick={() => navigateMonth(1)} className="text-xl font-bold px-3 py-1 rounded hover:bg-gray-100">›</button>
           </div>
 
-          {/* Formulaire de réservation */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Réserver un créneau</h2>
-            
-            {/* Créneaux disponibles pour la date sélectionnée */}
-            {selectedDate && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Créneaux du {new Date(selectedDate + 'T00:00:00').toLocaleDateString('fr-FR')}
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {getSlotsForDate(new Date(selectedDate + 'T00:00:00')).map(slot => (
+          <div className="grid grid-cols-7 gap-2 text-center mb-3 text-sm font-semibold text-gray-600">
+            {dayNames.map((d, i) => <div key={i}>{d}</div>)}
+          </div>
+
+          <div className="grid grid-cols-7 gap-3">
+            {cells.map((date, idx) => {
+              if (!date) return <div key={`empty-${idx}`} className="w-11 h-11" />;
+
+              const ymd = formatYMD(date);
+              const dayNum = date.getDate();
+              const isPast = ymd < todayYMD;
+              const available = availableDates.includes(ymd);
+              const slotCount = getSlotsForDate(date).length;
+
+              let base = "relative flex items-center justify-center w-11 h-11 rounded-full font-semibold transition-all select-none";
+              if (isPast) base += " text-gray-300 bg-gray-50";
+              else if (available) base += " bg-gradient-to-tr from-green-400 to-green-600 text-white shadow-md hover:scale-110 cursor-pointer";
+              else base += " text-gray-400 bg-white";
+
+              if (selectedDate === ymd) base += " ring-4 ring-blue-200 scale-110 shadow-[0_0_20px_rgba(37,99,235,0.15)]";
+
+              return (
+                <button
+                  key={ymd}
+                  className={base}
+                  disabled={isPast || !available}
+                  onClick={() => {
+                    if (!isPast && available) {
+                      setSelectedDate(ymd);
+                      setSelectedSlot(null);
+                      setMessage('');
+                    }
+                  }}
+                  aria-label={`Jour ${dayNum}${available ? ', disponible' : ', indisponible'}`}
+                  type="button"
+                >
+                  {dayNum}
+                  {available && (
+                    <span className="absolute -top-2 -right-2 text-xs bg-blue-600 text-white px-1.5 rounded-full">
+                      {slotCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Formulaire & créneaux */}
+        <section className="bg-white rounded-2xl p-6 shadow-lg">
+          <h3 className="text-xl font-semibold mb-4">Réserver un créneau</h3>
+
+          {!selectedDate && (
+            <p className="mb-4 text-gray-600 italic">Choisissez un jour dans le calendrier pour voir les créneaux disponibles.</p>
+          )}
+
+          {selectedDate && (
+            <>
+              <div className="mb-4 text-gray-700">
+                <strong>Créneaux pour </strong>
+                {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+
+              <div className="flex flex-wrap gap-3 mb-6">
+                {getSlotsForDate(selectedDate).map(slot => {
+                  const timeStr = safeParseISO(slot.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  const isSelected = selectedSlot?.id === slot.id;
+                  return (
                     <button
                       key={slot.id}
                       onClick={() => setSelectedSlot(slot)}
-                      className={`
-                        p-3 rounded-lg text-sm font-medium transition-all duration-200
-                        ${selectedSlot?.id === slot.id 
-                          ? 'bg-green-500 text-white ring-2 ring-green-300' 
-                          : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700'
-                        }
-                      `}
+                      type="button"
+                      className={`px-4 py-2 rounded-full font-semibold transition-shadow
+                        ${isSelected ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
                     >
-                      {new Date(slot.datetime).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {timeStr}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
+                {getSlotsForDate(selectedDate).length === 0 && (
+                  <p className="text-gray-500 italic">Aucun créneau disponible ce jour.</p>
+                )}
               </div>
-            )}
+            </>
+          )}
 
-            {!selectedDate && (
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-2">📅</div>
-                <p>Sélectionnez d'abord une date dans le calendrier</p>
-              </div>
-            )}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <input
+              type="text"
+              placeholder="Votre nom complet"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              className="rounded-lg px-4 py-2 border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <input
+              type="email"
+              placeholder="Votre email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              className="rounded-lg px-4 py-2 border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
 
-            {selectedDate && getSlotsForDate(new Date(selectedDate + 'T00:00:00')).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-2">😔</div>
-                <p>Aucun créneau disponible pour cette date</p>
-              </div>
-            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className={`py-3 rounded-lg font-semibold transition-colors
+                ${loading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+            >
+              {loading ? 'Réservation...' : 'Réserver'}
+            </button>
+          </form>
 
-            {selectedSlot && (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom complet
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Votre nom"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="votre@email.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                    required
-                  />
-                </div>
-
-                {/* Résumé de la réservation */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-green-800 mb-2">Résumé de votre réservation</h4>
-                  <p className="text-green-700 text-sm">
-                    📅 {new Date(selectedSlot.datetime).toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                  <p className="text-green-700 text-sm">
-                    🕐 {new Date(selectedSlot.datetime).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`
-                    w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-200
-                    ${loading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transform hover:scale-105'
-                    }
-                  `}
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Réservation en cours...</span>
-                    </div>
-                  ) : (
-                    'Confirmer la réservation'
-                  )}
-                </button>
-              </form>
-            )}
-
-            {message && (
-              <div className={`
-                mt-6 p-4 rounded-lg text-center font-medium
-                ${message.includes('❌') 
-                  ? 'bg-red-50 text-red-700 border border-red-200' 
-                  : 'bg-green-50 text-green-700 border border-green-200'
-                }
-              `}>
-                {message}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {message && (
+            <div className={`mt-4 p-3 rounded ${message.startsWith('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {message}
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

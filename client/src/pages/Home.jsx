@@ -209,6 +209,7 @@ export default function Home() {
             </p>
           </div>
         </div>
+
       </footer>
 
       <style jsx>{`

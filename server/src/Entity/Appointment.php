@@ -3,13 +3,18 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Post;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ApiResource(
     formats: ['jsonld', 'json'],
     normalizationContext: ['groups' => ['read']],
-    denormalizationContext: ['groups' => ['write']]
+    denormalizationContext: ['groups' => ['write']],
+    operations: [
+        // On référence le service par son id (déclaré dans services.yaml)
+        new Post(processor: 'appointment.processor'),
+    ]
 )]
 class Appointment
 {
@@ -19,11 +24,11 @@ class Appointment
     #[ORM\ManyToOne(targetEntity: Slot::class)]
     private ?Slot $slot = null;
 
-    #[ORM\Column]
-    private string $name;
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $name = '';
 
-    #[ORM\Column]
-    private string $email;
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $email = '';
 
     #[ORM\Column(type: "boolean")]
     private bool $confirmed = false;
