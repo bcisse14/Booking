@@ -74,7 +74,7 @@ class NotificationService
                       <p>Si vous souhaitez annuler, cliquez sur le lien ci-dessous :</p>
                       <p><a href=\"{$cancelUrl}\">Appuyez ici pour annuler votre rendez-vous</a></p>
                       <p>Après annulation, le créneau sera de nouveau disponible et nous vous enverrons une confirmation.</p>
-                      <p>Cordialement,<br/>L'équipe de réservation</p>
+                      <p>Cordialement,<br/>L'équipe de réservation — par Bafodé Cissé</p>
                     </div>
                 ";
 
@@ -111,11 +111,13 @@ class NotificationService
             $datetimeEsc = htmlspecialchars($datetime, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
             $ownerHtml = "
-                <h2>Rendez-vous annulé</h2>
-                <p>Le rendez-vous suivant a été annulé et le créneau est de nouveau disponible :</p>
-                <p><strong>Nom :</strong> {$clientNameEsc}</p>
-                <p><strong>Email :</strong> {$clientEmailEsc}</p>
-                <p><strong>Date & heure :</strong> {$datetimeEsc}</p>
+                <div style='font-family: Arial, sans-serif;'>
+                    <h2>Rendez-vous annulé</h2>
+                    <p>Le rendez-vous suivant a été annulé et le créneau est de nouveau disponible :</p>
+                    <p><strong>Nom :</strong> {$clientNameEsc}</p>
+                    <p><strong>Email :</strong> {$clientEmailEsc}</p>
+                    <p><strong>Date & heure :</strong> {$datetimeEsc}</p>
+                </div>
             ";
             $ownerEmail = (new Email())
                 ->from('noreply@votre-domaine.com')
@@ -132,7 +134,7 @@ class NotificationService
                       <h2>Votre rendez-vous a été annulé</h2>
                       <p>Bonjour {$clientNameEsc},</p>
                       <p>Votre rendez-vous du <strong>{$datetimeEsc}</strong> a bien été annulé. Le créneau est maintenant disponible.</p>
-                      <p>Cordialement,<br/>L'équipe de réservation</p>
+                      <p>Cordialement,<br/>L'équipe de réservation — par Bafodé Cissé</p>
                     </div>
                 ";
                 $confirmation = (new Email())

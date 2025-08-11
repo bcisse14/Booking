@@ -57,7 +57,7 @@ export default function Home() {
                 </h1>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {user ? (
                 <>
@@ -75,11 +75,12 @@ export default function Home() {
                   </button>
                 </>
               ) : (
+                // On n'affiche plus "Se connecter" / "Créer un compte"
                 <Link
-                  to="/login"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  to="/booking"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
-                  Se connecter
+                  Réserver
                 </Link>
               )}
             </div>
@@ -99,7 +100,7 @@ export default function Home() {
               en quelques clics
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Système de réservation simple et efficace. Choisissez votre créneau, 
+              Système de réservation simple et efficace. Choisissez votre créneau,
               réservez instantanément et recevez une confirmation par email.
             </p>
           </div>
@@ -113,9 +114,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Features Grid */}
+      {/* Features Grid : on a enlevé la carte "Créer un compte" */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8">
           {/* Réservation */}
           <div className="group">
             <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 border border-gray-100">
@@ -136,27 +137,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Création d'utilisateur */}
-          <div className="group">
-            <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 border border-gray-100">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <span className="text-2xl">👤</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Créer un compte</h3>
-              <p className="text-gray-600 mb-6">
-                Créez votre compte utilisateur pour accéder à toutes les fonctionnalités.
-              </p>
-              <Link
-                to="/user"
-                className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
-              >
-                Créer un compte
-                <span className="ml-2">→</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Administration */}
+          {/* Administration (visible seulement si user.isAdmin) */}
           {user?.isAdmin && (
             <div className="group">
               <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 border border-gray-100">
@@ -209,10 +190,10 @@ export default function Home() {
             </p>
           </div>
         </div>
-
       </footer>
 
-      <style jsx>{`
+      {/* NOTE: removed the `jsx` attribute — use plain <style> so React won't warn */}
+      <style>{`
         @keyframes blob {
           0% {
             transform: translate(0px, 0px) scale(1);
