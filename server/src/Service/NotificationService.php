@@ -1,5 +1,4 @@
 <?php
-// src/Service/NotificationService.php
 namespace App\Service;
 
 use App\Entity\Appointment;
@@ -41,7 +40,6 @@ class NotificationService
             $clientEmailEsc = htmlspecialchars($clientEmail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $datetimeEsc = htmlspecialchars($datetime, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-            // Mail au propriétaire
             $ownerHtml = "
                 <div style='font-family: Arial, sans-serif;'>
                     <h2>Nouveau rendez-vous réservé</h2>
@@ -59,7 +57,6 @@ class NotificationService
             $this->mailer->send($ownerEmail);
             $this->logger->info('Notification envoyée au propriétaire', ['appointment_id' => $appointment->getId()]);
 
-            // Mail au client — inclut lien d'annulation
             if (!empty($appointment->getEmail())) {
                 $cancelUrl = $this->buildCancelUrl($appointment);
                 $clientHtml = "
@@ -74,7 +71,7 @@ class NotificationService
                       <p>Si vous souhaitez annuler, cliquez sur le lien ci-dessous :</p>
                       <p><a href=\"{$cancelUrl}\">Appuyez ici pour annuler votre rendez-vous</a></p>
                       <p>Après annulation, le créneau sera de nouveau disponible et nous vous enverrons une confirmation.</p>
-                      <p>Cordialement,<br/>L'équipe de réservation — par Bafodé Cissé</p>
+                      <p>Cordialement,<br/>Bafodé Cissé</p>
                     </div>
                 ";
 
@@ -134,7 +131,7 @@ class NotificationService
                       <h2>Votre rendez-vous a été annulé</h2>
                       <p>Bonjour {$clientNameEsc},</p>
                       <p>Votre rendez-vous du <strong>{$datetimeEsc}</strong> a bien été annulé. Le créneau est maintenant disponible.</p>
-                      <p>Cordialement,<br/>L'équipe de réservation — par Bafodé Cissé</p>
+                      <p>Cordialement,<br/>Bafodé Cissé</p>
                     </div>
                 ";
                 $confirmation = (new Email())
