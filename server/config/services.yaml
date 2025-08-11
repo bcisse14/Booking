@@ -1,0 +1,16 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\State\UserProcessor:
+        tags: ['api_platform.state_processor']
+        bind:
+            $entityManager: '@doctrine.orm.entity_manager'
+            $passwordHasher: '@security.user_password_hasher'
+            $validator: '@validator'
+
+    App\Command\MakeAdminCommand:
+        tags: ['console.command']
+
+
