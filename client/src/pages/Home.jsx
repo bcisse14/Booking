@@ -62,11 +62,6 @@ export default function Home() {
               {user ? (
                 <>
                   <span className="text-gray-700 font-medium">{user.email}</span>
-                  {user.isAdmin && (
-                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
-                      Admin
-                    </span>
-                  )}
                   <button
                     onClick={handleLogout}
                     className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
@@ -75,7 +70,6 @@ export default function Home() {
                   </button>
                 </>
               ) : (
-                // On n'affiche plus "Se connecter" / "Créer un compte"
                 <Link
                   to="/booking"
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -114,11 +108,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Features Grid : on a enlevé la carte "Créer un compte" */}
+      {/* Features Grid - Carte centrée */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Réservation */}
-          <div className="group">
+        <div className="flex justify-center">
+          <div className="group max-w-md w-full">
             <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 border border-gray-100">
               <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <span className="text-2xl">📅</span>
@@ -136,28 +129,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-
-          {/* Administration (visible seulement si user.isAdmin) */}
-          {user?.isAdmin && (
-            <div className="group">
-              <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 border border-gray-100">
-                <div className="w-16 h-16 bg-gradient-to-r from-red-400 to-red-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <span className="text-2xl">⚙️</span>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Administration</h3>
-                <p className="text-gray-600 mb-6">
-                  Gérez les créneaux, les utilisateurs et consultez les réservations.
-                </p>
-                <Link
-                  to="/admin"
-                  className="inline-flex items-center justify-center w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-200 transform hover:scale-105"
-                >
-                  Accéder à l'admin
-                  <span className="ml-2">→</span>
-                </Link>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -192,7 +163,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* NOTE: removed the `jsx` attribute — use plain <style> so React won't warn */}
+      {/* Styles animations */}
       <style>{`
         @keyframes blob {
           0% {
