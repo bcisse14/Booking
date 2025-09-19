@@ -11,8 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Flyctl
-        uses: superfly/flyctl-actions@v1
+      - name: Install flyctl
+        run: |
+          # install flyctl using the official installer
+          curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
+          /usr/local/bin/flyctl version
 
       - name: Authenticate flyctl
         env:
