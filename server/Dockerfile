@@ -51,7 +51,8 @@ WORKDIR /var/www/html
 COPY --from=build /app /var/www/html
 
 # Copy entrypoint that will run runtime tasks (cache warmup) when env vars are available
-COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+# When build context is repository root the entrypoint lives under server/entrypoint.sh
+COPY ./server/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN chown -R www-data:www-data /var/www/html || true
