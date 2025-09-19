@@ -198,9 +198,11 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table style='margin: 0 auto;'>
+                                                <table role='presentation' width='100%'>
                                                     <tr>
-                                                        <td class='notification-icon'>🔔</td>
+                                                        <td align='center'>
+                                                            <div class='notification-icon'>🔔</div>
+                                                        </td>
                                                     </tr>
                                                 </table>
                                                 <h1>Nouveau rendez-vous !</h1>
@@ -454,9 +456,11 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table style='margin: 0 auto;'>
+                                                <table role='presentation' width='100%'>
                                                     <tr>
-                                                        <td class='calendar-icon'>📅</td>
+                                                        <td align='center'>
+                                                            <div class='calendar-icon'>📅</div>
+                                                        </td>
                                                     </tr>
                                                 </table>
                                                 <h1>Rendez-vous confirmé</h1>
@@ -729,9 +733,11 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table style='margin: 0 auto;'>
+                                                <table role='presentation' width='100%'>
                                                     <tr>
-                                                        <td class='calendar-icon'>📅</td>
+                                                        <td align='center'>
+                                                            <div class='calendar-icon'>📅</div>
+                                                        </td>
                                                     </tr>
                                                 </table>
                                                 <h1>Rendez-vous annulé</h1>
@@ -972,7 +978,13 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <div class='check-icon'>✓</div>
+                                                <table role='presentation' width='100%'>
+                                                    <tr>
+                                                        <td align='center'>
+                                                            <div class='check-icon'>✓</div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
                                                 <h1>Annulation confirmée</h1>
                                                 <p>Votre rendez-vous a été annulé avec succès</p>
                                             </td>
