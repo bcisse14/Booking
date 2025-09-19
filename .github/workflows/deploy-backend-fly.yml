@@ -21,7 +21,8 @@ jobs:
         env:
           FLYCTL_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          echo "$FLYCTL_TOKEN" | /tmp/bin/flyctl auth token
+          # use the non-interactive login with access token
+          /tmp/bin/flyctl auth login --access-token "$FLYCTL_TOKEN"
 
       - name: Build & Deploy
         env:
