@@ -13,8 +13,9 @@ WORKDIR /app
 RUN curl -sS https://get.symfony.com/cli/installer | bash \
     && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony || true
 
-# Copy entire project for composer scripts that may rely on repository files (eg. bin/console)
-COPY . .
+# Copy only the server/ directory into the build context so composer.json is available at /app
+# This Dockerfile is executed with repository root as the build context.
+COPY ./server/ .
 
 # Create non-root user and give ownership to avoid composer disabling plugins when run as root
 RUN useradd -m appuser && chown -R appuser:appuser /app
