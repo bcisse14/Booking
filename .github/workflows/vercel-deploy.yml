@@ -10,6 +10,10 @@ on:
 jobs:
   vercel-deploy:
     runs-on: ubuntu-latest
+    env:
+      # Build-time API URL baked into the production build. This avoids
+      # runtime fallbacks and ensures the frontend posts to the backend.
+      VITE_API_URL: 'https://booking-backend-cold-water-8579.fly.dev'
     concurrency:
       group: vercel-deploy-client
       cancel-in-progress: true
@@ -36,15 +40,22 @@ jobs:
 
       - name: Build
         working-directory: client
-        run: npm run build
+        run: |
+          echo "VITE_API_URL=$VITE_API_URL"
+          npm run build
 
       - name: Deploy to Vercel (npx)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "Missing VERCEL_TOKEN secret. Add it under Settings → Secrets → Actions." >&2
             exit 1
           fi
           cd client
+          # Provide org/project envs (if available) and the token. We already
+          # baked VITE_API_URL in the build above; passing the token avoids
+          # interactive auth in CI.
           npx --yes vercel --token "$VERCEL_TOKEN" --prod --confirm
