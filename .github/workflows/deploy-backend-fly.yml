@@ -17,17 +17,10 @@ jobs:
           curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/tmp sh
           /tmp/bin/flyctl version
 
-      - name: Authenticate flyctl
-        env:
-          FLYCTL_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          # use the non-interactive login with access token
-          /tmp/bin/flyctl auth login --access-token "$FLYCTL_TOKEN"
-
       - name: Build & Deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           # Run flyctl from repository root so the Dockerfile's COPY ./server/ . works
-          # and point flyctl to the server's fly.toml and Dockerfile explicitly.
-          /tmp/bin/flyctl deploy --config server/fly.toml --dockerfile server/Dockerfile
+          # Pass the access token directly to the deploy command to avoid any interactive login.
+          /tmp/bin/flyctl deploy --config server/fly.toml --dockerfile server/Dockerfile --access-token "$FLY_API_TOKEN"
