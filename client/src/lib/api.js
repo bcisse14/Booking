@@ -4,8 +4,23 @@
 // the browser may block) when the backend URL isn't configured.
 export const API_ORIGIN = import.meta.env.VITE_API_URL ?? '';
 export const API = (path) => {
-  const origin = API_ORIGIN.replace(/\/$/, '');
+  // start from the build-time origin (may be empty)
+  let origin = (API_ORIGIN || '').replace(/\/$/, '');
+
+  // Safety: if the build-time origin points to localhost but the app is
+  // currently served from a non-localhost host (production), prefer a
+  // relative URL so the frontend talks to the same origin that served it.
+  try {
+    if (origin && /localhost|127\.0\.0\.1/.test(origin)) {
+      const host = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        origin = '';
+      }
+    }
+  } catch {
+    // ignore and fall back to build-time origin
+  }
+
   const p = path.startsWith('/') ? path : '/' + path;
-  // If origin is empty, return a relative path so requests go to the frontend origin.
   return origin ? `${origin}${p}` : `${p}`;
 };
