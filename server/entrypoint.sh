@@ -4,8 +4,10 @@ set -e
 # If DATABASE_URL is present then run cache warmup so that runtime-only operations succeed
 if [ -n "$DATABASE_URL" ]; then
   echo "Database url found, warming up cache and running migrations if requested..."
-  # Ensure permissions
-  chown -R www-data:www-data /var/www/html || true
+  # Ensure cache/log directories exist and are writable by the web user
+  mkdir -p /var/www/html/var/cache /var/www/html/var/log || true
+  chown -R www-data:www-data /var/www/html/var || true
+  chmod -R 0775 /var/www/html/var || true
   cd /var/www/html
   # Run cache warmup in prod environment
   APP_ENV=prod APP_DEBUG=0 php bin/console cache:warmup || true
