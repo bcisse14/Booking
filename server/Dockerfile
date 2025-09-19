@@ -10,7 +10,14 @@ WORKDIR /var/www/html
 
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction || true
+# Allow composer scripts to run as root inside the container (needed for CI/container builds)
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Install symfony CLI so composer auto-scripts (symfony-cmd) are available
+RUN curl -sS https://get.symfony.com/cli/installer | bash \
+    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony || true
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Copy app
 COPY . .
