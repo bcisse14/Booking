@@ -16,16 +16,16 @@ use Symfony\Component\Serializer\Annotation\Groups;
 class Slot
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
-    #[Groups(['slot:read', 'appointment:read'])]
+    #[Groups(['slot:read', 'appointment:read', 'read'])]
     private ?int $id = null;
 
     #[ORM\Column(type: "datetimetz")]
     #[Assert\NotNull(message: "La date et l'heure sont obligatoires.")]
-    #[Groups(['slot:read', 'slot:write', 'appointment:read'])]
+    #[Groups(['slot:read', 'slot:write', 'appointment:read', 'read'])]
     private ?\DateTimeInterface $datetime = null;
 
     #[ORM\Column(type: "boolean")]
-    #[Groups(['slot:read', 'slot:write', 'appointment:read'])]
+    #[Groups(['slot:read', 'slot:write', 'appointment:read', 'read'])]
     private bool $reserved = false;
 
     public function getId(): ?int

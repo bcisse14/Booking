@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\GetCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -13,7 +15,17 @@ use Symfony\Component\Serializer\Annotation\Groups;
     normalizationContext: ['groups' => ['read']],
     denormalizationContext: ['groups' => ['write']],
     operations: [
+        new GetCollection(),
         new Post(processor: 'appointment.processor'),
+        new Delete(
+            uriTemplate: '/appointments/cancel/{token}',
+            uriVariables: [
+                'token' => 'token'
+            ],
+            processor: \App\State\AppointmentCancellationProcessor::class,
+            name: 'cancel_appointment',
+            read: false
+        ),
     ]
 )]
 class Appointment
