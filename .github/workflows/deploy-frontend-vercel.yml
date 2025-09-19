@@ -12,11 +12,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        run: |
+          # prefer npx to avoid global install issues on Actions runners
+          npm ci --silent || true
 
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Missing VERCEL_TOKEN secret. Please add it to repository secrets." >&2
+            exit 1
+          fi
           cd client
-          vercel --token $VERCEL_TOKEN --prod --confirm
+          # use npx so we don't rely on global install
+          npx vercel --token "$VERCEL_TOKEN" --prod --confirm
