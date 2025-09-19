@@ -13,8 +13,6 @@ jobs:
 
       - name: Setup Flyctl
         uses: superfly/flyctl-actions@v1
-        with:
-          version: '0.0.355'
 
       - name: Authenticate flyctl
         env:
@@ -28,4 +26,5 @@ jobs:
         run: |
           cd server
           # build not required if using dockerfile inside server
-          flyctl deploy --config fly.toml --remote-only
+          # remove --remote-only (not supported in this flyctl build)
+          flyctl deploy --config fly.toml
