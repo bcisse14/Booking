@@ -6,6 +6,15 @@ mkdir -p /var/www/html/var/cache /var/www/html/var/log || true
 chown -R www-data:www-data /var/www/html/var || true
 chmod -R 0775 /var/www/html/var || true
 
+# Diagnostic prints to help debug permission issues during startup
+echo "[entrypoint] starting at $(date)" >&2 || true
+echo "[entrypoint] whoami: $(whoami)" >&2 || true
+echo "[entrypoint] id: $(id)" >&2 || true
+echo "[entrypoint] /var/www/html permissions:" >&2 || true
+ls -la /var/www/html >&2 || true
+echo "[entrypoint] /var/www/html/var permissions:" >&2 || true
+ls -la /var/www/html/var >&2 || true
+
 # If DATABASE_URL is present then run cache warmup so that runtime-only operations succeed
 if [ -n "$DATABASE_URL" ]; then
   echo "Database url found, warming up cache and running migrations if requested..."
