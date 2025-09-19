@@ -56,6 +56,7 @@ class Appointment
     private bool $cancelled = false;
 
     #[ORM\Column(type: 'string', length: 64, nullable: true, unique: true)]
+    #[Groups(['read'])]
     private ?string $cancelToken = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
