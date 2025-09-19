@@ -24,8 +24,9 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 USER appuser
 
 # Install PHP dependencies (as non-root user inside the image that has php and composer available)
-# Run composer in production mode so dev-only bundles (eg. MakerBundle) are not registered during auto-scripts
-RUN APP_ENV=prod APP_DEBUG=0 composer install --no-dev --optimize-autoloader --no-interaction
+# Run composer in production mode and skip running scripts during the build so runtime actions
+# (cache:clear, migrations, etc.) which require runtime env vars are not executed during image build.
+RUN APP_ENV=prod APP_DEBUG=0 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 USER root
 
@@ -37,13 +38,24 @@ RUN apt-get update && apt-get install -y \
     libpq-dev libzip-dev libonig-dev zlib1g-dev \
     && docker-php-ext-install pdo pdo_pgsql zip mbstring opcache
 
+# Install gosu for dropping privileges when starting the server
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates wget gnupg2; \
+    wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.14/gosu-amd64"; \
+    chmod +x /usr/local/bin/gosu
+
 WORKDIR /var/www/html
 
 # Copy application files and installed vendor from build stage
 COPY --from=build /app /var/www/html
 
+# Copy entrypoint that will run runtime tasks (cache warmup) when env vars are available
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 RUN chown -R www-data:www-data /var/www/html || true
 
 EXPOSE 8000
 
-CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
