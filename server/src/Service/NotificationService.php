@@ -95,8 +95,9 @@ class NotificationService
                             height: 70px !important;
                             background-color: #ffffff !important;
                             border-radius: 50% !important;
-                            display: table-cell !important;
-                            vertical-align: middle !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
                             text-align: center !important;
                             margin: 0 auto 20px auto !important;
                             font-size: 35px !important;
@@ -625,8 +626,9 @@ class NotificationService
                             height: 70px !important;
                             background-color: #ffffff !important;
                             border-radius: 50% !important;
-                            display: table-cell !important;
-                            vertical-align: middle !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
                             text-align: center !important;
                             margin: 0 auto 20px auto !important;
                             font-size: 35px !important;
