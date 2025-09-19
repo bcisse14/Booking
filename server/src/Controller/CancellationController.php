@@ -310,7 +310,7 @@ class CancellationController extends AbstractController
                     pour de nouvelles réservations.
                 </div>
                 <div class='actions'>
-                    <a href='http://localhost:5173/' class='btn btn-home'>← Retour à l'accueil</a>
+                    <a href='" . (getenv('FRONTEND_URL') ?: (getenv('APP_URL') ?: '/')) . "' class='btn btn-home'>← Retour à l'accueil</a>
                 </div>
             " : "
                 <div class='message'>
@@ -372,7 +372,7 @@ class CancellationController extends AbstractController
                         Une notification par email a été automatiquement envoyée pour confirmer cette annulation.
                     </div>
                     <div class='actions'>
-                        <a href='http://localhost:5173/' class='btn btn-home'>← Retour à l'accueil</a>
+                        <a href='" . (getenv('FRONTEND_URL') ?: (getenv('APP_URL') ?: '/')) . "' class='btn btn-home'>← Retour à l'accueil</a>
                     </div>
                 </div>
                 <div class='footer'>
