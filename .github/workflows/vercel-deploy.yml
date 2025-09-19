@@ -57,26 +57,14 @@ jobs:
           echo "Show index.html head"
           head -n 80 dist/index.html || true
 
-      - name: Deploy to Vercel (npx)
+      - name: Deploy to Vercel (action)
+        uses: amondnet/vercel-action@v21
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./client
+          prod: true
+          args: --debug
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "Missing VERCEL_TOKEN secret. Add it under Settings → Secrets → Actions." >&2
-            exit 1
-          fi
-          cd client
-          # Provide org/project envs (if available) and the token. We already
-          # baked VITE_API_URL in the build above; passing the token avoids
-          # interactive auth in CI.
-          # Run vercel in debug mode and tee the output to a file so the
-          # Actions job always contains the full CLI log for troubleshooting.
-          npx --yes vercel --token "$VERCEL_TOKEN" --prod --yes --debug 2>&1 | tee /tmp/vercel-debug.log || true
-          echo "=== Last lines of /tmp/vercel-debug.log ==="
-          tail -n 400 /tmp/vercel-debug.log || true
-          if [ -f ~/.vercel/logs/last.log ]; then
-            echo "=== ~/.vercel/logs/last.log ==="
-            tail -n 200 ~/.vercel/logs/last.log || true
-          fi
+          VITE_API_URL: ${{ env.VITE_API_URL }}
