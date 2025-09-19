@@ -13,15 +13,15 @@ jobs:
 
       - name: Install flyctl
         run: |
-          # install flyctl using the official installer
-          curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
-          /usr/local/bin/flyctl version
+          # install flyctl using the official installer to a writable location
+          curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/tmp sh
+          /tmp/bin/flyctl version
 
       - name: Authenticate flyctl
         env:
           FLYCTL_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          echo "$FLYCTL_TOKEN" | flyctl auth token
+          echo "$FLYCTL_TOKEN" | /tmp/bin/flyctl auth token
 
       - name: Build & Deploy
         env:
@@ -29,5 +29,5 @@ jobs:
         run: |
           cd server
           # build not required if using dockerfile inside server
-          # remove --remote-only (not supported in this flyctl build)
-          flyctl deploy --config fly.toml
+          # use the installed flyctl binary from /tmp
+          /tmp/bin/flyctl deploy --config fly.toml
