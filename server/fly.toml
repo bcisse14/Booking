@@ -1,0 +1,22 @@
+# fly.toml - sample; run `fly launch` to create a proper one
+app = "booking-backend"
+
+[build]
+  image = ""
+
+[env]
+  APP_ENV = "prod"
+  APP_SECRET = "REPLACE_ME"
+  # DATABASE_URL will be set as secret in fly secrets
+
+[[services]]
+  internal_port = 8000
+  protocol = "tcp"
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+***
