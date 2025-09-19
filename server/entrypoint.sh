@@ -14,6 +14,17 @@ echo "[entrypoint] /var/www/html permissions:" >&2 || true
 ls -la /var/www/html >&2 || true
 echo "[entrypoint] /var/www/html/var permissions:" >&2 || true
 ls -la /var/www/html/var >&2 || true
+echo "[entrypoint] detailed stat for cache dirs:" >&2 || true
+stat -c "%n -> %U:%G mode=%a" /var/www/html/var || true
+stat -c "%n -> %U:%G mode=%a" /var/www/html/var/cache || true
+stat -c "%n -> %U:%G mode=%a" /var/www/html/var/cache/prod || true
+echo "[entrypoint] www-data info:" >&2 || true
+getent passwd www-data || true
+id www-data || true
+
+# TEMP: make cache world-writable to detect permission-related issues (diagnostic only)
+echo "[entrypoint] making /var/www/html/var/cache world-writable (temporary)" >&2 || true
+chmod -R 0777 /var/www/html/var/cache || true
 
 # If DATABASE_URL is present then run cache warmup so that runtime-only operations succeed
 if [ -n "$DATABASE_URL" ]; then
