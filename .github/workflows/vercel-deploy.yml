@@ -41,6 +41,13 @@ jobs:
       - name: Build
         working-directory: client
         run: |
+            # ensure VITE_API_URL is available during build (fall back to public backend)
+            if [ -z "$VITE_API_URL" ]; then
+              export VITE_API_URL="https://booking-backend-cold-water-8579.fly.dev"
+            fi
+            echo "Using VITE_API_URL=$VITE_API_URL"
+            # Make it available to Vite build (Vite reads VITE_* env variables at build time)
+            export VITE_API_URL
           echo "VITE_API_URL=$VITE_API_URL"
           npm run build
 
@@ -58,4 +65,9 @@ jobs:
           # Provide org/project envs (if available) and the token. We already
           # baked VITE_API_URL in the build above; passing the token avoids
           # interactive auth in CI.
-          npx --yes vercel --token "$VERCEL_TOKEN" --prod --confirm
+            # run vercel in debug mode to get verbose logs in Actions
+            npx --yes vercel --token "$VERCEL_TOKEN" --prod --confirm --debug || true
+            # capture last 200 lines of Vercel debug log (if any) for troubleshooting
+            if [ -f ~/.vercel/logs/last.log ]; then
+              echo "=== Vercel debug tail ==="
+              tail -n 200 ~/.vercel/logs/last.log || true
