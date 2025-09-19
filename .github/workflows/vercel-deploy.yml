@@ -41,15 +41,21 @@ jobs:
       - name: Build
         working-directory: client
         run: |
-            # ensure VITE_API_URL is available during build (fall back to public backend)
-            if [ -z "$VITE_API_URL" ]; then
-              export VITE_API_URL="https://booking-backend-cold-water-8579.fly.dev"
-            fi
-            echo "Using VITE_API_URL=$VITE_API_URL"
-            # Make it available to Vite build (Vite reads VITE_* env variables at build time)
-            export VITE_API_URL
-          echo "VITE_API_URL=$VITE_API_URL"
+          # ensure VITE_API_URL is available during build (fall back to public backend)
+          if [ -z "$VITE_API_URL" ]; then
+            export VITE_API_URL="https://booking-backend-cold-water-8579.fly.dev"
+          fi
+          echo "Using VITE_API_URL=$VITE_API_URL"
+          # Vite reads VITE_* env variables at build time
           npm run build
+
+      - name: Verify build artifacts
+        working-directory: client
+        run: |
+          echo "Listing client/dist"
+          ls -la dist || true
+          echo "Show index.html head"
+          head -n 80 dist/index.html || true
 
       - name: Deploy to Vercel (npx)
         env:
@@ -65,9 +71,12 @@ jobs:
           # Provide org/project envs (if available) and the token. We already
           # baked VITE_API_URL in the build above; passing the token avoids
           # interactive auth in CI.
-            # run vercel in debug mode to get verbose logs in Actions
-            npx --yes vercel --token "$VERCEL_TOKEN" --prod --confirm --debug || true
-            # capture last 200 lines of Vercel debug log (if any) for troubleshooting
-            if [ -f ~/.vercel/logs/last.log ]; then
-              echo "=== Vercel debug tail ==="
-              tail -n 200 ~/.vercel/logs/last.log || true
+          # Run vercel in debug mode and tee the output to a file so the
+          # Actions job always contains the full CLI log for troubleshooting.
+          npx --yes vercel --token "$VERCEL_TOKEN" --prod --yes --debug 2>&1 | tee /tmp/vercel-debug.log || true
+          echo "=== Last lines of /tmp/vercel-debug.log ==="
+          tail -n 400 /tmp/vercel-debug.log || true
+          if [ -f ~/.vercel/logs/last.log ]; then
+            echo "=== ~/.vercel/logs/last.log ==="
+            tail -n 200 ~/.vercel/logs/last.log || true
+          fi
