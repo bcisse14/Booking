@@ -198,13 +198,7 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table role='presentation' width='100%'>
-                                                    <tr>
-                                                        <td align='center'>
-                                                            <div class='notification-icon'>🔔</div>
-                                                        </td>
-                                                    </tr>
-                                                </table>
+                                                <!-- icon removed per user request -->
                                                 <h1>Nouveau rendez-vous !</h1>
                                                 <p>Un client vient de réserver un créneau</p>
                                             </td>
@@ -456,13 +450,7 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table role='presentation' width='100%'>
-                                                    <tr>
-                                                        <td align='center'>
-                                                            <div class='calendar-icon'>📅</div>
-                                                        </td>
-                                                    </tr>
-                                                </table>
+                                                <!-- icon removed per user request -->
                                                 <h1>Rendez-vous confirmé</h1>
                                                 <p>Votre réservation a été enregistrée avec succès</p>
                                             </td>
@@ -733,13 +721,7 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table role='presentation' width='100%'>
-                                                    <tr>
-                                                        <td align='center'>
-                                                            <div class='calendar-icon'>📅</div>
-                                                        </td>
-                                                    </tr>
-                                                </table>
+                                                <!-- icon removed per user request -->
                                                 <h1>Rendez-vous annulé</h1>
                                                 <p>Notification système de votre plateforme</p>
                                             </td>
@@ -978,13 +960,7 @@ class NotificationService
                                         <!-- Header -->
                                         <tr>
                                             <td class='header'>
-                                                <table role='presentation' width='100%'>
-                                                    <tr>
-                                                        <td align='center'>
-                                                            <div class='check-icon'>✓</div>
-                                                        </td>
-                                                    </tr>
-                                                </table>
+                                                <!-- icon removed per user request -->
                                                 <h1>Annulation confirmée</h1>
                                                 <p>Votre rendez-vous a été annulé avec succès</p>
                                             </td>
