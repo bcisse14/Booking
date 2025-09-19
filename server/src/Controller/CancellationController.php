@@ -15,7 +15,9 @@ class CancellationController extends AbstractController
         $appointment = $appointmentRepository->findOneBy(['cancelToken' => $token]);
         
         if (!$appointment) {
-            return $this->render('cancellation/not_found.html.twig');
+            // Template may be missing in some deployments; return a small inline HTML response
+            $html = "<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'/><title>Lien d'annulation invalide</title></head><body style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#2d3748; padding:40px;'><div style='max-width:720px;margin:0 auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.12);'><h1 style='font-size:24px;margin-bottom:8px'>Lien d\'annulation invalide</h1><p>Le lien est invalide ou a déjà été utilisé. Si vous pensez que c'est une erreur, contactez l'administrateur ou cherchez votre email de confirmation.</p><p style='margin-top:18px'><a href='" . (getenv('FRONTEND_URL') ?: (getenv('APP_URL') ?: '/')) . "' style='display:inline-block;margin-top:12px;padding:10px 16px;border-radius:8px;background:#667eea;color:white;text-decoration:none;'>← Retour à l'accueil</a></p></div></body></html>";
+            return new Response($html, Response::HTTP_OK, ['Content-Type' => 'text/html; charset=UTF-8']);
         }
 
         $slot = $appointment->getSlot();
