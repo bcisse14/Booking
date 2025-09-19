@@ -24,7 +24,8 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 USER appuser
 
 # Install PHP dependencies (as non-root user inside the image that has php and composer available)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Run composer in production mode so dev-only bundles (eg. MakerBundle) are not registered during auto-scripts
+RUN APP_ENV=prod APP_DEBUG=0 composer install --no-dev --optimize-autoloader --no-interaction
 
 USER root
 
