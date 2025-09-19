@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API } from '../lib/api';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -12,7 +13,7 @@ export default function Home() {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const response = await axios.get('http://localhost:8000/api/users/me', {
+          const response = await axios.get(API('/api/users/me'), {
             headers: { Authorization: `Bearer ${token}` }
           });
           setUser(response.data);

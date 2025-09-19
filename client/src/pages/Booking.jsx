@@ -1,6 +1,7 @@
 // src/pages/Booking.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API } from '../lib/api';
 import { Link } from 'react-router-dom';
 
 export default function Booking() {
@@ -89,9 +90,9 @@ export default function Booking() {
 
   const fetchSlots = async () => {
     try {
-      // Si tu utilises Vite proxy -> '/api/slots?reserved=false'
-      // Sinon -> 'http://localhost:8000/api/slots?reserved=false'
-      const res = await axios.get('http://localhost:8000/api/slots?reserved=false');
+  // Si tu utilises Vite proxy -> '/api/slots?reserved=false'
+  // Sinon -> API('/api/slots?reserved=false')
+  const res = await axios.get(API('/api/slots?reserved=false'));
       const data = res?.data;
       let items = [];
 
@@ -152,7 +153,7 @@ export default function Booking() {
 
   /* ---------- PATCH helper (essaye plusieurs Content-Types si besoin) ---------- */
   const patchSlot = async (slotId, bodyObj) => {
-    const url = `http://localhost:8000/api/slots/${slotId}`;
+  const url = API(`/api/slots/${slotId}`);
     const contentTypes = ['application/json', 'application/ld+json'];
     let lastError = null;
 
@@ -190,7 +191,7 @@ export default function Booking() {
 
     try {
       // 1) Création Appointment
-      await axios.post('http://localhost:8000/api/appointments', {
+  await axios.post(API('/api/appointments'), {
         name: name.trim(),
         email: email.trim(),
         slot: `/api/slots/${selectedSlot.id}`,
@@ -200,7 +201,7 @@ export default function Booking() {
       });
 
       // 2) PATCH slot reserved
-      await patchSlot(selectedSlot.id, { reserved: true });
+  await patchSlot(selectedSlot.id, { reserved: true });
 
       // Succès
       setMessage('✅ Rendez-vous réservé avec succès ! Un email de confirmation va être envoyé.');
@@ -312,7 +313,7 @@ export default function Booking() {
                   type="button"
                 >
                   {dayNum}
-                  {available && (
+                  {available && !isPast && (
                     <span className="absolute -top-2 -right-2 text-xs bg-blue-600 text-white px-1.5 rounded-full">
                       {slotCount}
                     </span>

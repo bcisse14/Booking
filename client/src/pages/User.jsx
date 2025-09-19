@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API } from '../lib/api';
 import { Link } from 'react-router-dom';
 
 export default function User() {
@@ -44,7 +45,7 @@ export default function User() {
     setMessage('');
 
     try {
-      const response = await axios.post('http://localhost:8000/api/users', {
+  const response = await axios.post(API('/api/users'), {
         email: email.trim(),
         password: password.trim()
       }, {
