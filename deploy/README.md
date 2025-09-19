@@ -1,9 +1,9 @@
-Booking - Déploiement (Frontend Vercel + Backend Supabase + Fly/Render)
+Prise de RDV - Déploiement (Frontend Vercel + Backend Supabase + Fly/Render)
 
 But: ceci est un guide pas-à-pas. Certaines étapes nécessitent d'exécuter des commandes depuis ta machine (accès internet). J'ai automatisé les fichiers Docker + SQL de base.
 
 1) Créer la base Supabase
-- Sur https://app.supabase.com -> new project -> nom: Booking
+- Sur https://app.supabase.com -> new project -> nom: Prise de RDV
 - Récupère la Connection string (Settings -> Database -> Connection string).
 - Copie la DATABASE_URL complète.
 

@@ -1,0 +1,37 @@
+# flyctl launch added from .gitignore
+
+###> symfony/framework-bundle ###
+.env.local
+.env.local.php
+.env.*.local
+config/secrets/prod/prod.decrypt.private.php
+public/bundles
+var
+vendor
+###< symfony/framework-bundle ###
+
+###> lexik/jwt-authentication-bundle ###
+config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###
+**/.env.local
+**/.env.local.php
+
+# flyctl launch added from vendor/api-platform/core/src/HttpCache/.gitignore
+vendor/api-platform/core/src/HttpCache/composer.lock
+vendor/api-platform/core/src/HttpCache/vendor
+vendor/api-platform/core/src/HttpCache/.phpunit.result.cache
+
+# flyctl launch added from vendor/psr/container/.gitignore
+vendor/psr/container/**/composer.lock
+vendor/psr/container/**/composer.phar
+vendor/psr/container/vendor
+
+# flyctl launch added from vendor/psr/event-dispatcher/.gitignore
+vendor/psr/event-dispatcher/vendor
+vendor/psr/event-dispatcher/**/composer.lock
+
+# flyctl launch added from vendor/willdurand/negotiation/.gitignore
+vendor/willdurand/negotiation/vendor
+vendor/willdurand/negotiation/**/composer.lock
+vendor/willdurand/negotiation/**/.phpunit.result.cache
+fly.toml

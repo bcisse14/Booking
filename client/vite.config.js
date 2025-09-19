@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-  '/api': 'http://localhost:8000',  // backend Symfony (dev proxy) - in production set VITE_API_URL
+  '/api': 'http://localhost:8010',  // dev mock on 8010; change to 8000 if running Symfony locally
     },
   },
 });

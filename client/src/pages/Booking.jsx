@@ -92,7 +92,10 @@ export default function Booking() {
     try {
   // Si tu utilises Vite proxy -> '/api/slots?reserved=false'
   // Sinon -> API('/api/slots?reserved=false')
-  const res = await axios.get(API('/api/slots?reserved=false'));
+  const fetchUrl = API('/api/slots?reserved=false');
+  // debug: affiche l'URL appelée dans la console devtools
+  console.debug('[booking] fetchSlots ->', fetchUrl);
+  const res = await axios.get(fetchUrl);
       const data = res?.data;
       let items = [];
 
@@ -191,12 +194,15 @@ export default function Booking() {
 
     try {
       // 1) Création Appointment
-  await axios.post(API('/api/appointments'), {
+      const apptUrl = API('/api/appointments');
+      const apptPayload = {
         name: name.trim(),
         email: email.trim(),
         slot: `/api/slots/${selectedSlot.id}`,
         confirmed: false
-      }, {
+      };
+      console.debug('[booking] create appointment ->', apptUrl, apptPayload);
+  await axios.post(apptUrl, apptPayload, {
         headers: { 'Content-Type': 'application/ld+json' }
       });
 
@@ -259,7 +265,7 @@ export default function Booking() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link to="/" className="text-gray-700 font-medium hover:text-gray-900">← Accueil</Link>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Réservation
+            Prise de RDV
           </h1>
           <div style={{ width: 80 }} />
         </div>

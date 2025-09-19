@@ -54,7 +54,7 @@ export default function Home() {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  📅 BookingApp
+                  📅 Prise de RDV
                 </h1>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function Home() {
               <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <span className="text-2xl">📅</span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Prendre rendez-vous</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Prise de RDV</h3>
               <p className="text-gray-600 mb-6">
                 Consultez les créneaux disponibles et réservez votre rendez-vous en temps réel.
               </p>
@@ -158,7 +158,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <p className="text-gray-400">
-              © 2025 BookingApp. Tous droits réservés.
+              © 2025 Prise de RDV. Tous droits réservés.
             </p>
           </div>
         </div>
