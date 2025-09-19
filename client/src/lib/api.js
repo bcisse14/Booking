@@ -21,6 +21,22 @@ export const API = (path) => {
     // ignore and fall back to build-time origin
   }
 
+  // Runtime guard: if no build-time origin is provided and the app is running
+  // on Vercel (or other known static host), prefer the deployed backend host.
+  // This prevents the frontend from POSTing to the Vercel origin (which may
+  // respond 405) when VITE_API_URL wasn't set at build time.
+  try {
+    if (!origin && typeof window !== 'undefined' && window.location && window.location.hostname) {
+      const host = window.location.hostname;
+      // detect common Vercel host pattern and fallback to the Fly backend
+      if (host.endsWith('.vercel.app') || host.endsWith('.vercel.sh')) {
+        origin = 'https://booking-backend-cold-water-8579.fly.dev';
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   const p = path.startsWith('/') ? path : '/' + path;
   return origin ? `${origin}${p}` : `${p}`;
 };

@@ -1,0 +1,38 @@
+E2E run against https://booking-backend-cold-water-8579.fly.dev
+
+1) GET /api/slots
+application/ld+json || true)
+printf "slots length: %d\n" "${#slots}"
+echo "$slots" | sed -n 1,200p
+
+printf "\n2) Pick first available slot\n"
+slot_iri=$(echo "$slots" | python3 - <<PY
+import sys,json
+try:
+    j=json.load(sys.stdin)
+except Exception:
+    print()
+    sys.exit(0)
+slots=[]
+if isinstance(j, dict) and hydra:member in j:
+    slots=j[hydra:member]
+elif isinstance(j, list):
+    slots=j
+else:
+    for v in j.values():
+        if isinstance(v,list):
+            slots=v
+            break
+for s in slots:
+    if not s.get(reserved) and s.get(@id):
+        print(s.get(@id))
+        sys.exit(0)
+print()
+PY
+)
+if [ -z "$slot_iri" ]; then echo "No available slot found; aborting E2E."; exit 0; fi
+if [[ "$slot_iri" == /* ]]; then slot_url="$app$slot_iri"; elif [[ "$slot_iri" == http* ]]; then slot_url="$slot_iri"; else slot_url="$app/$slot_iri"; fi
+printf "Selected slot: %s\n" "$slot_url"
+
+printf "\n3) Create appointment (POST /api/appointments)\n"
+create_resp=$(curl -sS -w "\n%{http_code}" -X POST "$app/api/appointments" -H Content-Type:: -c: line 8: unexpected EOF while looking for matching `)'

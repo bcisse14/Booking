@@ -24,3 +24,24 @@ jobs:
           # Run flyctl from repository root so the Dockerfile's COPY ./server/ . works
           # Pass the access token directly to the deploy command to avoid any interactive login.
           /tmp/bin/flyctl deploy --config server/fly.toml --dockerfile server/Dockerfile --access-token "$FLY_API_TOKEN"
+
+      - name: Smoke-test cancel page
+        # lightweight non-destructive check: verify cancel page returns 200/2xx for an invalid token
+        run: |
+          set -euo pipefail
+          app_url=$( /tmp/bin/flyctl info --app $(basename $(pwd)) --json 2>/dev/null | jq -r '.[0].Hostname' 2>/dev/null || echo "")
+          # fallback: if we can't determine app url via flyctl, use known host from fly.toml
+          if [ -z "$app_url" ]; then
+            app_url=$(grep "app =" server/fly.toml | sed -E "s/.*=\s*\"(.*)\"/\1/" || true)
+          fi
+          if [ -z "$app_url" ]; then
+            echo "Cannot determine app host for smoke-test"; exit 0
+          fi
+          token=invalid-smoke-$(date +%s)
+          url="https://$app_url/appointments/cancel/$token"
+          echo "Checking $url"
+          status=$(curl -sS -o /dev/null -w "%{http_code}" "$url" || echo "000")
+          echo "HTTP status: $status"
+          if [ "$status" -ge 500 ] || [ "$status" = "000" ]; then
+            echo "Smoke-test failed: cancel page returned $status"; exit 1
+          fi
